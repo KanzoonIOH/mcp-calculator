@@ -1,8 +1,20 @@
 from fastmcp import FastMCP
+from pydantic import BaseModel, ConfigDict
 
 from tools.calculator import add, devide, multiply, substract
 
 mcp = FastMCP(name="calculator")
+
+
+# ── INPUT MODEL ───────────────────────────────────────────────────────────────
+# extra="ignore" silently discards any unexpected fields that some LLM clients
+# (e.g. n8n + Qwen) inject into tool call arguments (sessionId, chatInput, etc.)
+
+
+class CalcInput(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    a: float
+    b: float
 
 
 # ── TOOL ──────────────────────────────────────────────────────────────────────
@@ -11,40 +23,40 @@ mcp = FastMCP(name="calculator")
 
 
 @mcp.tool()
-def addition(a: float, b: float) -> float:
+def addition(input: CalcInput) -> float:
     """
     Add two numbers together.
     Use this when you need to sum two values.
     """
-    return add(a, b)
+    return add(input.a, input.b)
 
 
 @mcp.tool()
-def subtraction(a: float, b: float) -> float:
+def subtraction(input: CalcInput) -> float:
     """
     Subtract b from a and return the result.
     Use this when you need to find the difference between two values.
     """
-    return substract(a, b)
+    return substract(input.a, input.b)
 
 
 @mcp.tool()
-def multiplication(a: float, b: float) -> float:
+def multiplication(input: CalcInput) -> float:
     """
     Multiply two numbers and return the result.
     Use this when you need to find the product of two values.
     """
-    return multiply(a, b)
+    return multiply(input.a, input.b)
 
 
 @mcp.tool()
-def division(a: float, b: float) -> float:
+def division(input: CalcInput) -> float:
     """
     Divide a by b and return the result.
     Use this when you need to find the quotient of two values.
     Raises an error if b is zero.
     """
-    return devide(a, b)
+    return devide(input.a, input.b)
 
 
 # ── RESOURCE ──────────────────────────────────────────────────────────────────
