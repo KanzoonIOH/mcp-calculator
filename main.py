@@ -1,62 +1,71 @@
+import inspect
+from functools import wraps
+
 from fastmcp import FastMCP
-from pydantic import BaseModel, ConfigDict
 
 from tools.calculator import add, devide, multiply, substract
 
 mcp = FastMCP(name="calculator")
 
 
-# ── INPUT MODEL ───────────────────────────────────────────────────────────────
-# extra="ignore" silently discards any unexpected fields that some LLM clients
-# (e.g. n8n + Qwen) inject into tool call arguments (sessionId, chatInput, etc.)
+# ── HELPER ────────────────────────────────────────────────────────────────────
+# Some LLM clients (e.g. n8n + Qwen) inject extra fields into tool call
+# arguments (sessionId, chatInput, action, toolCallId, …). This decorator
+# strips any keyword argument that the wrapped function does not declare,
+# so Pydantic validation never sees the unexpected fields.
 
 
-class CalcInput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    a: float
-    b: float
+def ignore_extra_args(fn):
+    sig = inspect.signature(fn)
+
+    @wraps(fn)
+    def wrapper(**kwargs):
+        filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
+        return fn(**filtered)
+
+    return wrapper
 
 
 # ── TOOL ──────────────────────────────────────────────────────────────────────
-# A function the AI calls to *do something*.
-# The agent decides when to invoke it based on the user's request.
-
-
 @mcp.tool()
-def addition(input: CalcInput) -> float:
+@ignore_extra_args
+def addition(a: float, b: float) -> float:
     """
     Add two numbers together.
     Use this when you need to sum two values.
     """
-    return add(input.a, input.b)
+    return add(a, b)
 
 
 @mcp.tool()
-def subtraction(input: CalcInput) -> float:
+@ignore_extra_args
+def subtraction(a: float, b: float) -> float:
     """
     Subtract b from a and return the result.
     Use this when you need to find the difference between two values.
     """
-    return substract(input.a, input.b)
+    return substract(a, b)
 
 
 @mcp.tool()
-def multiplication(input: CalcInput) -> float:
+@ignore_extra_args
+def multiplication(a: float, b: float) -> float:
     """
     Multiply two numbers and return the result.
     Use this when you need to find the product of two values.
     """
-    return multiply(input.a, input.b)
+    return multiply(a, b)
 
 
 @mcp.tool()
-def division(input: CalcInput) -> float:
+@ignore_extra_args
+def division(a: float, b: float) -> float:
     """
     Divide a by b and return the result.
     Use this when you need to find the quotient of two values.
     Raises an error if b is zero.
     """
-    return devide(input.a, input.b)
+    return devide(a, b)
 
 
 # ── RESOURCE ──────────────────────────────────────────────────────────────────
