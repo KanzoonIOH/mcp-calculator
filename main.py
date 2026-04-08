@@ -7,36 +7,8 @@ from tools.calculator import add, devide, multiply, substract
 mcp = FastMCP(name="calculator")
 
 
-# ── HELPER ────────────────────────────────────────────────────────────────────
-# Some LLM clients (e.g. n8n + Qwen) inject extra fields into tool call
-# arguments (sessionId, chatInput, action, toolCallId, …). This decorator
-# strips any keyword argument that the wrapped function does not declare,
-# so Pydantic validation never sees the unexpected fields.
-#
-# NOTE: We intentionally do NOT use @functools.wraps here. wraps() sets
-# __wrapped__, which causes Pydantic's TypeAdapter to follow the reference
-# back to the original function's strict signature and reject extra keys.
-# Instead we copy only the attributes FastMCP needs (__name__, __doc__,
-# __annotations__), leaving the wrapper's own **kwargs signature visible
-# to Pydantic so it accepts — and we discard — the unknown fields.
-
-
-def ignore_extra_args(fn):
-    sig = inspect.signature(fn)
-
-    def wrapper(**kwargs):
-        filtered = {k: v for k, v in kwargs.items() if k in sig.parameters}
-        return fn(**filtered)
-
-    wrapper.__name__ = fn.__name__
-    wrapper.__doc__ = fn.__doc__
-    wrapper.__annotations__ = fn.__annotations__
-    return wrapper
-
-
 # ── TOOL ──────────────────────────────────────────────────────────────────────
 @mcp.tool()
-@ignore_extra_args
 def addition(a: float, b: float) -> float:
     """
     Add two numbers together.
@@ -46,7 +18,6 @@ def addition(a: float, b: float) -> float:
 
 
 @mcp.tool()
-@ignore_extra_args
 def subtraction(a: float, b: float) -> float:
     """
     Subtract b from a and return the result.
@@ -56,7 +27,6 @@ def subtraction(a: float, b: float) -> float:
 
 
 @mcp.tool()
-@ignore_extra_args
 def multiplication(a: float, b: float) -> float:
     """
     Multiply two numbers and return the result.
@@ -66,7 +36,6 @@ def multiplication(a: float, b: float) -> float:
 
 
 @mcp.tool()
-@ignore_extra_args
 def division(a: float, b: float) -> float:
     """
     Divide a by b and return the result.
@@ -118,4 +87,4 @@ Do not calculate in your head — always call the tool so the result is verified
 
 
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    mcp.run()
